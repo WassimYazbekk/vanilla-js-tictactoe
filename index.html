@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tic Tac Toe</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #1e1e1e;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        border-radius: 8px;
+        background-color: #2c2c2c;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      }
+
+      h1 {
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+
+      #board {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        width: 80px;
+        height: 80px;
+        background-color: #333;
+        color: #fff;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        border-radius: 8px;
+      }
+
+      .cell[data-player="X"] {
+        color: #ff6262;
+      }
+
+      .cell[data-player="O"] {
+        color: #67a8ff;
+      }
+
+      .cell.winner {
+        background-color: #ffeb3b;
+      }
+
+      .message {
+        font-size: 2.5rem;
+        text-align: center;
+        min-height: 3rem;
+      }
+      .message-bottom {
+        font-size: 1.5rem;
+        text-align: center;
+        min-height: 2rem;
+      }
+
+      button {
+        padding: 10px 20px;
+        font-size: 16px;
+        font-weight: bold;
+        text-transform: uppercase;
+        background-color: #ff6262;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      .btn-holder{
+        display: flex;
+        justify-content: center;
+        min-height: 40px;
+        margin: 20px;
+    }
+
+      .hidden{
+        display: none;
+      }
+
+      button:hover {
+        background-color: #ff4343;
+      }
+    </style>
+    <link rel="shortcut icon" href="fav-icon.jpg" type="image/x-icon" />
+  </head>
+  <body>
+    <div class="message"></div>
+    <div class="btn-holder"><button id="replay-button" class="hidden">Replay</button></div>
+    <div id="board"></div>
+    <div class="message-bottom">Click on a cell to play!</div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const board = document.getElementById("board");
+        const cells = [];
+        const message = document.querySelector(".message");
+        const replayButton = document.getElementById("replay-button");
+
+        let currentPlayer = "X";
+        let gameOver = false;
+
+        // Create the board cells
+        for (let i = 0; i < 9; i++) {
+          const cell = document.createElement("div");
+          cell.classList.add("cell");
+          cell.addEventListener("click", () => makeMove(i));
+          cells.push(cell);
+          board.appendChild(cell);
+        }
+
+        // Handle a move by a player
+        function makeMove(index) {
+          if (gameOver || cells[index].textContent !== "") {
+            return;
+          }
+
+          cells[index].textContent = currentPlayer;
+          cells[index].setAttribute("data-player", currentPlayer);
+
+          if (checkWin(currentPlayer)) {
+            gameOver = true;
+            cells.forEach((cell) => cell.classList.add("winner"));
+            setMessage(`Player ${currentPlayer} wins!`);
+            showReplayButton();
+            return;
+          }
+
+          if (checkTie()) {
+            gameOver = true;
+            setMessage("It's a tie!");
+            showReplayButton();
+            return;
+          }
+
+          currentPlayer = currentPlayer === "X" ? "O" : "X";
+
+          // Computer's turn
+          if (!gameOver && currentPlayer === "O") {
+            makeComputerMove();
+          }
+        }
+
+        // Check if the current player has won
+        function checkWin(player) {
+          const winConditions = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8], // rows
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8], // columns
+            [0, 4, 8],
+            [2, 4, 6], // diagonals
+          ];
+
+          return winConditions.some((condition) => {
+            return condition.every(
+              (index) => cells[index].getAttribute("data-player") === player
+            );
+          });
+        }
+
+        // Check if it's a tie
+        function checkTie() {
+          return [...cells].every((cell) => cell.textContent !== "");
+        }
+
+        // Computer makes a move using Minimax algorithm
+        function makeComputerMove() {
+          let bestScore = -Infinity;
+          let bestMove;
+
+          for (let i = 0; i < cells.length; i++) {
+            if (cells[i].textContent === "") {
+              cells[i].textContent = currentPlayer;
+              cells[i].setAttribute("data-player", currentPlayer);
+
+              let score = minimax(cells, 0, false);
+              cells[i].textContent = "";
+              cells[i].removeAttribute("data-player");
+
+              if (score > bestScore) {
+                bestScore = score;
+                bestMove = i;
+              }
+            }
+          }
+
+          cells[bestMove].textContent = currentPlayer;
+          cells[bestMove].setAttribute("data-player", currentPlayer);
+
+          if (checkWin(currentPlayer)) {
+            gameOver = true;
+            cells.forEach((cell) => cell.classList.add("winner"));
+            setMessage(`Player ${currentPlayer} wins!`);
+            showReplayButton();
+          } else if (checkTie()) {
+            gameOver = true;
+            setMessage("It's a tie!");
+            showReplayButton();
+          }
+
+          currentPlayer = currentPlayer === "X" ? "O" : "X";
+        }
+
+        // Minimax algorithm
+        function minimax(cells, depth, isMaximizingPlayer) {
+          const scores = {
+            X: -1,
+            O: 1,
+            tie: 0,
+          };
+
+          if (checkWin("X")) {
+            return -Infinity;
+          }
+
+          if (checkWin("O")) {
+            return scores.O - depth;
+          }
+
+          if (checkTie()) {
+            return scores.tie;
+          }
+
+          if (isMaximizingPlayer) {
+            let bestScore = -Infinity;
+
+            for (let i = 0; i < cells.length; i++) {
+              if (cells[i].textContent === "") {
+                cells[i].textContent = "O";
+                cells[i].setAttribute("data-player", "O");
+
+                let score = minimax(cells, depth + 1, false);
+                cells[i].textContent = "";
+                cells[i].removeAttribute("data-player");
+
+                bestScore = Math.max(score, bestScore);
+              }
+            }
+
+            return bestScore;
+          } else {
+            let bestScore = Infinity;
+
+            for (let i = 0; i < cells.length; i++) {
+              if (cells[i].textContent === "") {
+                cells[i].textContent = "X";
+                cells[i].setAttribute("data-player", "X");
+
+                let score = minimax(cells, depth + 1, true);
+                cells[i].textContent = "";
+                cells[i].removeAttribute("data-player");
+
+                bestScore = Math.min(score, bestScore);
+              }
+            }
+
+            return bestScore;
+          }
+        }
+
+        // Set the message
+        function setMessage(text) {
+          message.textContent = text;
+        }
+
+        // Show the replay button
+        function showReplayButton() {
+          replayButton.classList.remove("hidden");
+          replayButton.addEventListener("click", replayGame);
+        }
+
+        // Replay the game
+        function replayGame() {
+          cells.forEach((cell) => {
+            cell.textContent = "";
+            cell.removeAttribute("data-player");
+            cell.classList.remove("winner");
+          });
+
+          currentPlayer = "X";
+          gameOver = false;
+          message.textContent = "";
+          replayButton.classList.add("hidden");
+          replayButton.removeEventListener("click", replayGame);
+        }
+      });
+    </script>
+  </body>
+</html>
